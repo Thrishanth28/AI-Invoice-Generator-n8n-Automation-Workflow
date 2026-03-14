@@ -1,0 +1,193 @@
+{
+  "name": "AI Invoice Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Invoice Generator",
+        "formDescription": "Fill in the details to generate and send a professional invoice",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Client Name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Client Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your Name / Business Name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Service Provided",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. Website Development, Logo Design, SEO Audit"
+            },
+            {
+              "fieldLabel": "Amount (INR)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Due Date",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "e.g. 30 March 2026"
+            },
+            {
+              "fieldLabel": "Additional Notes",
+              "fieldType": "textarea",
+              "requiredField": false,
+              "placeholder": "e.g. Payment via UPI: example@upi or Bank Transfer"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "id": "inv-0001-0001-0001-000000000001",
+      "name": "Invoice Form",
+      "webhookId": "invoice-form-trigger-001"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a professional invoice email with the following details:\n\nClient Name: {{ $json['Client Name'] }}\nClient Email: {{ $json['Client Email'] }}\nBusiness Name: {{ $json['Your Name / Business Name'] }}\nService Provided: {{ $json['Service Provided'] }}\nAmount: INR {{ $json['Amount (INR)'] }}\nDue Date: {{ $json['Due Date'] }}\nAdditional Notes: {{ $json['Additional Notes'] }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional invoice generator assistant.\n\nCreate a clean, professional invoice email based on the provided details.\n\nFormat the invoice EXACTLY like this:\n\n---\nINVOICE\n---\n\nFrom: [Business Name]\nTo: [Client Name]\nDate: [Today's date]\nInvoice #: INV-[random 4 digit number]\n\n---\nSERVICES\n---\n\nDescription                          Amount\n[Service Provided]              INR [Amount]\n\nSUBTOTAL:                       INR [Amount]\nTAX (0%):                        INR 0\nTOTAL DUE:                      INR [Amount]\n\n---\nPAYMENT DETAILS\n---\n\nDue Date: [Due Date]\n[Additional Notes if provided]\n\n---\n\nThank you for your business, [Client Name]!\nWe appreciate your trust and look forward to working with you again.\n\nWarm regards,\n[Business Name]\n\n---\n\nKeep it clean, professional and easy to read.\nDo not add any extra commentary — only return the invoice text."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [260, 0],
+      "id": "inv-0001-0001-0001-000000000002",
+      "name": "Generate Invoice"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [340, 220],
+      "id": "inv-0001-0001-0001-000000000003",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Invoice Form').item.json['Client Email'] }}",
+        "subject": "=Invoice from {{ $('Invoice Form').item.json['Your Name / Business Name'] }} — {{ $('Invoice Form').item.json['Service Provided'] }}",
+        "emailType": "text",
+        "message": "=Dear {{ $('Invoice Form').item.json['Client Name'] }},\n\nPlease find your invoice below. Kindly review the details and process the payment by the due date.\n\n{{ $json.text }}\n\nIf you have any questions, feel free to reply to this email.\n\nThank you!\n{{ $('Invoice Form').item.json['Your Name / Business Name'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [520, 0],
+      "id": "inv-0001-0001-0001-000000000004",
+      "name": "Send Invoice to Client",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Invoice Form').item.json['Your Name / Business Name'] }}",
+        "subject": "=✅ Invoice Sent — {{ $('Invoice Form').item.json['Client Name'] }} | INR {{ $('Invoice Form').item.json['Amount (INR)'] }}",
+        "emailType": "text",
+        "message": "=Hi,\n\nYour invoice has been successfully sent to {{ $('Invoice Form').item.json['Client Name'] }} at {{ $('Invoice Form').item.json['Client Email'] }}.\n\nInvoice Summary:\n- Client: {{ $('Invoice Form').item.json['Client Name'] }}\n- Service: {{ $('Invoice Form').item.json['Service Provided'] }}\n- Amount: INR {{ $('Invoice Form').item.json['Amount (INR)'] }}\n- Due Date: {{ $('Invoice Form').item.json['Due Date'] }}\n\nKeep this for your records.\n\n— Your AI Invoice Bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [760, 0],
+      "id": "inv-0001-0001-0001-000000000005",
+      "name": "Send Confirmation to You",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Invoice Form": {
+      "main": [
+        [
+          {
+            "node": "Generate Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Invoice",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Invoice": {
+      "main": [
+        [
+          {
+            "node": "Send Invoice to Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Invoice to Client": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation to You",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "inv-v001-0001-0001-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "AIInvoiceGenerator001",
+  "tags": []
+}
